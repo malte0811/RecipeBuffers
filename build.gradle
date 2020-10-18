@@ -69,6 +69,11 @@ minecraft {
     }
 }
 
+def customGradle = rootProject.file('custom.gradle');
+if (customGradle.exists()) {
+    apply from: customGradle;
+}
+
 repositories{
     maven {
         // location of the maven that hosts JEI files

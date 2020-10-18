@@ -1,16 +1,15 @@
 package malte0811.recipebuffers.impl;
 
+import com.google.common.base.Preconditions;
 import io.netty.buffer.ByteBuf;
 import malte0811.recipebuffers.util.RecurringData;
-import net.minecraft.fluid.Fluid;
-import net.minecraft.fluid.Fluids;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.nbt.NBTTypes;
 import net.minecraft.network.PacketBuffer;
 import net.minecraft.util.ResourceLocation;
-import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.registries.ForgeRegistries;
 
 import javax.annotation.Nonnull;
@@ -43,6 +42,12 @@ public class OptimizedPacketBuffer extends PacketBuffer {
         return this;
     }
 
+    private static final int CONSTRUCTOR_TAG = 13;
+    static {
+        String tagName = NBTTypes.getGetTypeByID(CONSTRUCTOR_TAG).getTagName();
+        Preconditions.checkState(tagName.startsWith("UNKNOWN_"), "Unexpected NBT type: "+tagName);
+    }
+
     @Nonnull
     @Override
     public PacketBuffer writeItemStack(ItemStack stack, boolean limitedTag) {
@@ -52,15 +57,18 @@ public class OptimizedPacketBuffer extends PacketBuffer {
         writeRegistryIdUnsafe(ForgeRegistries.ITEMS, item);
         if (!stack.isEmpty()) {
             this.writeByte(stack.getCount());
-            CompoundNBT compoundnbt = null;
-            if ((item.isDamageable(stack) || item.shouldSyncTag())
-                    // Damageable items always have an NBT tag, which is larger (when serialized) all the rest of the
-                    // item. This skips the tag if it's the one automatically generated in the constructor.
-                    && !ItemStack.areItemStackTagsEqual(stack, new ItemStack(item))) {
-                compoundnbt = limitedTag ? stack.getShareTag() : stack.getTag();
+            // Damageable items always have an NBT tag, which is larger (when serialized) all the rest of the
+            // item. This skips the tag if it's the one automatically generated in the constructor.
+            if (ItemStack.areItemStackTagsEqual(stack, new ItemStack(item))) {
+                this.writeByte(CONSTRUCTOR_TAG);
+            } else {
+                CompoundNBT compoundnbt = null;
+                if (item.isDamageable(stack) || item.shouldSyncTag()) {
+                    compoundnbt = limitedTag ? stack.getShareTag() : stack.getTag();
+                }
+                this.writeCompoundTag(compoundnbt);
             }
 
-            this.writeCompoundTag(compoundnbt);
         }
         itemStackBytes += writerIndex() - oldIndex;
 
@@ -76,7 +84,16 @@ public class OptimizedPacketBuffer extends PacketBuffer {
         } else {
             int count = this.readByte();
             ItemStack itemstack = new ItemStack(item, count);
-            itemstack.readShareTag(this.readCompoundTag());
+            final int oldIndex = this.readerIndex();
+            int tagByte = readByte();
+            CompoundNBT tag;
+            if (tagByte == CONSTRUCTOR_TAG) {
+                tag = itemstack.getTag();
+            } else {
+                readerIndex(oldIndex);
+                tag = this.readCompoundTag();
+            }
+            itemstack.readShareTag(tag);
             return itemstack;
         }
     }

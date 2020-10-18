@@ -22,7 +22,12 @@ public class RecipePacketMixin {
      */
     @Overwrite
     public void readPacketData(PacketBuffer buf) throws IOException {
-        recipes = RecipeListSerializer.readRecipes(buf);
+        try {
+            recipes = RecipeListSerializer.readRecipes(buf);
+        } catch (Throwable x) {
+            x.printStackTrace();
+            throw x;
+        }
     }
 
     /**
@@ -31,7 +36,12 @@ public class RecipePacketMixin {
      */
     @Overwrite
     public void writePacketData(PacketBuffer buf) throws IOException {
-        RecipeListSerializer.writeRecipes(recipes, buf);
+        try {
+            RecipeListSerializer.writeRecipes(recipes, buf);
+        } catch (Throwable x) {
+            x.printStackTrace();
+            throw x;
+        }
     }
 
 }
