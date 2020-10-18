@@ -9,8 +9,7 @@ import org.spongepowered.asm.mixin.Overwrite;
 @Mixin(ShapedRecipe.class)
 public class ShapedRecipeMixin {
     /**
-     * Use custom serializer for more efficient serialization of duplicate ingredients
-     *
+     * @reason Use custom serializer for more efficient serialization of duplicate ingredients
      * @author malte0811
      */
     @Overwrite

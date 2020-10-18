@@ -17,31 +17,36 @@ import javax.annotation.Nonnull;
 
 public class OptimizedPacketBuffer extends PacketBuffer {
     private final RecurringData<String> namespaces;
+    int rlPathBytes = 0;
+    int itemStackBytes = 0;
 
     public OptimizedPacketBuffer(ByteBuf wrapped, boolean reading) {
         super(wrapped);
         this.namespaces = RecurringData.create(
-                this, PacketBuffer::readString, String::equals, PacketBuffer::writeString, reading
+                this, buffer -> buffer.readString(Short.MAX_VALUE), String::equals, PacketBuffer::writeString, reading
         );
     }
 
     @Nonnull
     @Override
     public ResourceLocation readResourceLocation() {
-        return new ResourceLocation(namespaces.read(), readString());
+        return new ResourceLocation(namespaces.read(), readString(Short.MAX_VALUE));
     }
 
     @Nonnull
     @Override
     public PacketBuffer writeResourceLocation(@Nonnull ResourceLocation toWrite) {
         namespaces.write(toWrite.getNamespace());
+        final int lastSize = writerIndex();
         writeString(toWrite.getPath());
+        rlPathBytes += writerIndex() - lastSize;
         return this;
     }
 
     @Nonnull
     @Override
     public PacketBuffer writeItemStack(ItemStack stack, boolean limitedTag) {
+        final int oldIndex = writerIndex();
         Item item = stack.getItem();
         // Do not send empty/nonempty as an extra byte, but use the fact that getItem()==AIR iff empty
         writeRegistryIdUnsafe(ForgeRegistries.ITEMS, item);
@@ -57,6 +62,7 @@ public class OptimizedPacketBuffer extends PacketBuffer {
 
             this.writeCompoundTag(compoundnbt);
         }
+        itemStackBytes += writerIndex() - oldIndex;
 
         return this;
     }

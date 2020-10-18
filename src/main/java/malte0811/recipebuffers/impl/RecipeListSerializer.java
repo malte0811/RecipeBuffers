@@ -23,8 +23,8 @@ import java.util.Map;
  * - Does not send the serializer ID for every recipe, instead sorts by ID and sends each ID once
  */
 public class RecipeListSerializer {
-    public static void writeRecipes(List<IRecipe<?>> recipes, PacketBuffer buf) throws IOException {
-        buf = new OptimizedPacketBuffer(buf, false);
+    public static void writeRecipes(List<IRecipe<?>> recipes, PacketBuffer bufIn) throws IOException {
+        OptimizedPacketBuffer buf = new OptimizedPacketBuffer(bufIn, false);
         Map<IRecipeSerializer<?>, List<IRecipe<?>>> bySerializer = new IdentityHashMap<>();
         for (IRecipe<?> recipe : recipes) {
             bySerializer.computeIfAbsent(recipe.getSerializer(), ser -> new ArrayList<>())
@@ -46,6 +46,8 @@ public class RecipeListSerializer {
             out.write(ByteBufUtil.getBytes(buf.copy()));
         }
         RecipeBuffers.LOGGER.info("Recipe packet size: {}", buf.readableBytes());
+        RecipeBuffers.LOGGER.info("Item stack bytes: {}", buf.itemStackBytes);
+        RecipeBuffers.LOGGER.info("RL path bytes: {}", buf.rlPathBytes);
     }
 
     public static List<IRecipe<?>> readRecipes(PacketBuffer buf) {
