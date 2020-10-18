@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "package": "malte0811.recipebuffers.mixin",
+  "compatibilityLevel": "JAVA_8",
+  "refmap": "recipebuffers.refmap.json",
+  "mixins": [
+    "RecipePacketMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "minVersion": "0.8"
+}

@@ -1,0 +1,24 @@
+modLoader="javafml"
+loaderVersion="[28,)"
+
+license="MIT"
+[[mods]]
+modId="recipebuffers"
+version="${file.jarVersion}"
+displayName="Recipe Buffers"
+authors="malte0811"
+description='''
+Reduces the size of SUpdateRecipesPacket in non-vanilla-compatible ways
+'''
+[[dependencies.recipebuffers]]
+    modId="forge"
+    mandatory=true
+    versionRange="[34.1.23,)"
+    ordering="NONE"
+    side="BOTH"
+[[dependencies.recipebuffers]]
+    modId="minecraft"
+    mandatory=true
+    versionRange="[1.16.3,)"
+    ordering="NONE"
+    side="BOTH"
