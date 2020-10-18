@@ -16,6 +16,11 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Differences from vanilla implementation:
+ *  - Uses {@link OptimizedPacketBuffer} for everything
+ *  - Does not send the serializer ID for every recipe, instead sorts by ID and sends each ID once
+ */
 public class RecipeListSerializer {
     public static void writeRecipes(List<IRecipe<?>> recipes, PacketBuffer buf) throws IOException {
         buf = new OptimizedPacketBuffer(buf, false);
@@ -30,7 +35,7 @@ public class RecipeListSerializer {
             buf.writeRegistryIdUnsafe(ForgeRegistries.RECIPE_SERIALIZERS, entry.getKey());
             buf.writeVarInt(entry.getValue().size());
             for (IRecipe<?> recipe : entry.getValue()) {
-                func_218771_a(recipe, buf, entry.getKey());
+                writeRecipe(recipe, buf, entry.getKey());
             }
         }
 
@@ -38,7 +43,7 @@ public class RecipeListSerializer {
         try (FileOutputStream out = new FileOutputStream("recipes.dmp")) {
             out.write(ByteBufUtil.getBytes(buf.copy()));
         }
-        RecipeBuffers.LOGGER.info("Buffer size: {}", buf.readableBytes());
+        RecipeBuffers.LOGGER.info("Recipe packet size: {}", buf.readableBytes());
     }
 
     public static List<IRecipe<?>> readRecipes(PacketBuffer buf) {
@@ -61,8 +66,8 @@ public class RecipeListSerializer {
         return serializer.read(name, buffer);
     }
 
-    public static <T extends IRecipe<?>> void func_218771_a(T p_218771_0_, PacketBuffer p_218771_1_, IRecipeSerializer<?> serializer) {
-        p_218771_1_.writeResourceLocation(p_218771_0_.getId());
-        ((net.minecraft.item.crafting.IRecipeSerializer<T>)serializer).write(p_218771_1_, p_218771_0_);
+    public static <T extends IRecipe<?>> void writeRecipe(T recipe, PacketBuffer buffer, IRecipeSerializer<?> serializer) {
+        buffer.writeResourceLocation(recipe.getId());
+        ((net.minecraft.item.crafting.IRecipeSerializer<T>)serializer).write(buffer, recipe);
     }
 }

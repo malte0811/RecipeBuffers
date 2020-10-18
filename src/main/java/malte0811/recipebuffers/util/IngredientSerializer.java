@@ -33,6 +33,7 @@ public class IngredientSerializer {
 
     public <T extends Ingredient> void write(T ingredient) {
         boolean isSpecial = !ingredient.isVanilla();
+        //TODO this bool should ideally be part of main VarInt
         buffer.writeBoolean(isSpecial);
         if (isSpecial) {
             @SuppressWarnings("unchecked")
@@ -48,7 +49,6 @@ public class IngredientSerializer {
     }
 
     public Ingredient read() {
-        //TODO bool should be part of main VarInt
         if (buffer.readBoolean()) {
             return CraftingHelper.getIngredient(buffer.readResourceLocation(), buffer);
         } else {

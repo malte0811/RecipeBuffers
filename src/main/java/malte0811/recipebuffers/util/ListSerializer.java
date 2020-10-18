@@ -9,9 +9,6 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 public class ListSerializer {
-    public static <T> void writeListR(PacketBuffer out, Collection<T> values, BiConsumer<T, PacketBuffer> write) {
-        writeList(out, values, (b, t) -> write.accept(t, b));
-    }
 
     public static <T> void writeList(PacketBuffer out, Collection<T> values, BiConsumer<PacketBuffer, T> write) {
         out.writeVarInt(values.size());

@@ -12,6 +12,10 @@ import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 
+/**
+ * Handles sending data that recurs commonly. If a value has been seen before it does not send the full value, but
+ * instead sends the index in the list of unique values.
+ */
 public abstract class RecurringData<T> {
     protected final List<T> known = new ArrayList<>();
     protected final PacketBuffer io;

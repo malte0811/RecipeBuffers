@@ -6,7 +6,6 @@ import net.minecraft.item.crafting.IRecipeSerializer;
 import net.minecraftforge.event.RegistryEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.registries.DeferredRegister;
 
 @Mod.EventBusSubscriber(modid = RecipeBuffers.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class RBRecipeSerializers {

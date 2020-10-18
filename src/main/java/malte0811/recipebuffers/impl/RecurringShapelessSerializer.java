@@ -11,6 +11,7 @@ import net.minecraft.util.ResourceLocation;
 
 import javax.annotation.Nonnull;
 
+// Uses recurring data optimization, very effective on recipes including large tag inputs
 public class RecurringShapelessSerializer extends ShapelessRecipe.Serializer {
     public static final RecurringShapelessSerializer INSTANCE = new RecurringShapelessSerializer();
 
