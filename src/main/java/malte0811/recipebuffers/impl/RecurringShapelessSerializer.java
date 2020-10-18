@@ -27,7 +27,7 @@ public class RecurringShapelessSerializer extends ShapelessRecipe.Serializer imp
         buffer.writeString(recipe.getGroup());
         buffer.writeVarInt(recipe.getIngredients().size());
 
-        for(Ingredient ingredient : recipe.getIngredients()) {
+        for (Ingredient ingredient : recipe.getIngredients()) {
             ingredients.write(ingredient);
         }
 
@@ -42,7 +42,7 @@ public class RecurringShapelessSerializer extends ShapelessRecipe.Serializer imp
         int numIngredients = buffer.readVarInt();
         NonNullList<Ingredient> ingredientList = NonNullList.withSize(numIngredients, Ingredient.EMPTY);
 
-        for(int j = 0; j < ingredientList.size(); ++j) {
+        for (int j = 0; j < ingredientList.size(); ++j) {
             ingredientList.set(j, ingredients.read());
         }
 

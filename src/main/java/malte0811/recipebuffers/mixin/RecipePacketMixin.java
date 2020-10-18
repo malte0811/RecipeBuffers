@@ -18,6 +18,7 @@ public class RecipePacketMixin {
 
     /**
      * Use more efficient format to send recipes over the network
+     *
      * @author malte0811
      */
     @Overwrite
@@ -27,6 +28,7 @@ public class RecipePacketMixin {
 
     /**
      * Use more efficient format to send recipes over the network
+     *
      * @author malte0811
      */
     @Overwrite

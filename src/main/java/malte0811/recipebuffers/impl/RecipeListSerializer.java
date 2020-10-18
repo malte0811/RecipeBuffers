@@ -19,8 +19,8 @@ import java.util.Map;
 
 /**
  * Differences from vanilla implementation:
- *  - Uses {@link OptimizedPacketBuffer} for everything
- *  - Does not send the serializer ID for every recipe, instead sorts by ID and sends each ID once
+ * - Uses {@link OptimizedPacketBuffer} for everything
+ * - Does not send the serializer ID for every recipe, instead sorts by ID and sends each ID once
  */
 public class RecipeListSerializer {
     public static void writeRecipes(List<IRecipe<?>> recipes, PacketBuffer buf) throws IOException {

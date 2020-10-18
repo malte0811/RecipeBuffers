@@ -27,7 +27,7 @@ public class RecurringShapedSerializer extends ShapedRecipe.Serializer implement
         buffer.writeVarInt(recipe.getRecipeHeight());
         buffer.writeString(recipe.getGroup());
 
-        for(Ingredient ingredient : recipe.getIngredients()) {
+        for (Ingredient ingredient : recipe.getIngredients()) {
             ingredients.write(ingredient);
         }
 
