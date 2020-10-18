@@ -12,7 +12,7 @@ import net.minecraft.util.ResourceLocation;
 import javax.annotation.Nonnull;
 
 // Uses recurring data optimization, very effective on recipes including large tag inputs
-public class RecurringShapedSerializer extends ShapedRecipe.Serializer {
+public class RecurringShapedSerializer extends ShapedRecipe.Serializer implements IRecurringRecipeSerializer<ShapedRecipe> {
     public static final RecurringShapedSerializer INSTANCE = new RecurringShapedSerializer();
 
     {
@@ -20,32 +20,34 @@ public class RecurringShapedSerializer extends ShapedRecipe.Serializer {
     }
 
     @Override
-    public void write(PacketBuffer buffer, ShapedRecipe recipe) {
+    public void write(
+            @Nonnull PacketBuffer buffer, @Nonnull ShapedRecipe recipe, @Nonnull IngredientSerializer ingredients
+    ) {
         buffer.writeVarInt(recipe.getRecipeWidth());
         buffer.writeVarInt(recipe.getRecipeHeight());
         buffer.writeString(recipe.getGroup());
 
-        IngredientSerializer serializer = new IngredientSerializer(buffer, false);
         for(Ingredient ingredient : recipe.getIngredients()) {
-            serializer.write(ingredient);
+            ingredients.write(ingredient);
         }
 
         buffer.writeItemStack(recipe.getRecipeOutput());
     }
 
     @Override
-    public ShapedRecipe read(@Nonnull ResourceLocation recipeId, PacketBuffer buffer) {
+    public ShapedRecipe read(
+            @Nonnull ResourceLocation recipeId, @Nonnull PacketBuffer buffer, @Nonnull IngredientSerializer ingredients
+    ) {
         int width = buffer.readVarInt();
         int height = buffer.readVarInt();
         String group = buffer.readString(32767);
-        NonNullList<Ingredient> ingredients = NonNullList.withSize(width * height, Ingredient.EMPTY);
+        NonNullList<Ingredient> ingredientList = NonNullList.withSize(width * height, Ingredient.EMPTY);
 
-        IngredientSerializer serializer = new IngredientSerializer(buffer, true);
-        for (int i = 0; i < ingredients.size(); ++i) {
-            ingredients.set(i, serializer.read());
+        for (int i = 0; i < ingredientList.size(); ++i) {
+            ingredientList.set(i, ingredients.read());
         }
 
         ItemStack output = buffer.readItemStack();
-        return new ShapedRecipe(recipeId, group, width, height, ingredients, output);
+        return new ShapedRecipe(recipeId, group, width, height, ingredientList, output);
     }
 }
