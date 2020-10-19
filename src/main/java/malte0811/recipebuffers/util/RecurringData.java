@@ -1,17 +1,12 @@
 package malte0811.recipebuffers.util;
 
-import com.mojang.datafixers.types.Func;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.crafting.Ingredient;
 import net.minecraft.network.PacketBuffer;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.function.BiConsumer;
-import java.util.function.BiPredicate;
 import java.util.function.Function;
 
 /**
@@ -67,8 +62,6 @@ public abstract class RecurringData<T> {
 
     public abstract T read();
 
-    public abstract <T2> RecurringData<T2> xmap(Function<T, T2> to, Function<T2, T> from);
-
     public abstract int size();
 
     public int hits() {
@@ -103,11 +96,6 @@ public abstract class RecurringData<T> {
         }
 
         @Override
-        public <T2> RecurringData<T2> xmap(Function<T, T2> to, Function<T2, T> from) {
-            return new Reader<>(io, read.andThen(to));
-        }
-
-        @Override
         public int size() {
             return known.size();
         }
@@ -138,14 +126,6 @@ public abstract class RecurringData<T> {
         @Override
         public T read() {
             throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public <T2> RecurringData<T2> xmap(Function<T, T2> to, Function<T2, T> from) {
-            return new Writer<>(
-                    io,
-                    (pb, t2) -> write.accept(pb, from.apply(t2))
-            );
         }
 
         @Override

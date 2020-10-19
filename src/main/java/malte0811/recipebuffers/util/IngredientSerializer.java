@@ -8,30 +8,25 @@ import net.minecraftforge.common.crafting.CraftingHelper;
 import net.minecraftforge.common.crafting.IIngredientSerializer;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class IngredientSerializer {
     private final PacketBuffer buffer;
-    private final RecurringData<Ingredient> basicIngredientHandler;
+    private final RecurringData<List<ItemstackWrapper>> basicIngredientHandler;
 
     public IngredientSerializer(PacketBuffer buffer, boolean reading) {
         this.buffer = buffer;
         this.basicIngredientHandler = createRecurringData(buffer, reading);
     }
 
-    private static RecurringData<Ingredient> createRecurringData(PacketBuffer buffer, boolean reader) {
+    private static RecurringData<List<ItemstackWrapper>> createRecurringData(PacketBuffer buffer, boolean reader) {
         return RecurringData.createForList(
                 buffer,
                 b -> new ItemstackWrapper(b.readItemStack()),
                 (b, i) -> b.writeItemStack(i.stack),
                 reader
-        ).xmap(
-                l -> {
-                    ItemStack[] stacks = l.stream().map(w -> w.stack).toArray(ItemStack[]::new);
-                    return Ingredient.fromStacks(stacks);
-                },
-                i -> Arrays.stream(i.getMatchingStacks()).map(ItemstackWrapper::new).collect(Collectors.toList())
         );
     }
 
@@ -48,7 +43,10 @@ public class IngredientSerializer {
             buffer.writeResourceLocation(key);
             serializer.write(buffer, ingredient);
         } else {
-            basicIngredientHandler.write(ingredient);
+            List<ItemstackWrapper> wrappers = Arrays.stream(ingredient.getMatchingStacks())
+                    .map(ItemstackWrapper::new)
+                    .collect(Collectors.toList());
+            basicIngredientHandler.write(wrappers);
         }
     }
 
@@ -56,7 +54,8 @@ public class IngredientSerializer {
         if (buffer.readBoolean()) {
             return CraftingHelper.getIngredient(buffer.readResourceLocation(), buffer);
         } else {
-            return basicIngredientHandler.read();
+            List<ItemstackWrapper> wrappers = basicIngredientHandler.read();
+            return Ingredient.fromStacks(wrappers.stream().map(w -> w.stack));
         }
     }
 
