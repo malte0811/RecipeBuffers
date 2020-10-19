@@ -2,6 +2,7 @@ package malte0811.recipebuffers.impl;
 
 import com.google.common.collect.Lists;
 import io.netty.buffer.ByteBufUtil;
+import malte0811.recipebuffers.Config;
 import malte0811.recipebuffers.RecipeBuffers;
 import malte0811.recipebuffers.util.IngredientSerializer;
 import net.minecraft.item.crafting.IRecipe;
@@ -41,15 +42,18 @@ public class RecipeListSerializer {
             }
         }
 
-        //Debug code
-        try (FileOutputStream out = new FileOutputStream("recipes.dmp")) {
-            out.write(ByteBufUtil.getBytes(buf.copy()));
+        if (Config.dumpPacket.get()) {
+            try (FileOutputStream out = new FileOutputStream("recipes.dmp")) {
+                out.write(ByteBufUtil.getBytes(buf.copy()));
+            }
         }
-        RecipeBuffers.LOGGER.info("Recipe packet size: {}", buf.readableBytes());
-        RecipeBuffers.LOGGER.info("Item stack bytes: {}", buf.itemStackBytes);
-        RecipeBuffers.LOGGER.info("RL path bytes: {}", buf.rlPathBytes);
-        RecipeBuffers.LOGGER.info("Ingredient cache size: {}", ingredientSerializer.cacheSize());
-        RecipeBuffers.LOGGER.info("Ingredient cache hits: {}", ingredientSerializer.cacheHits());
+        if (Config.logPacketStats.get()) {
+            RecipeBuffers.LOGGER.info("Recipe packet size: {}", buf.readableBytes());
+            RecipeBuffers.LOGGER.info("Item stack bytes: {}", buf.itemStackBytes);
+            RecipeBuffers.LOGGER.info("RL path bytes: {}", buf.rlPathBytes);
+            RecipeBuffers.LOGGER.info("Ingredient cache size: {}", ingredientSerializer.cacheSize());
+            RecipeBuffers.LOGGER.info("Ingredient cache hits: {}", ingredientSerializer.cacheHits());
+        }
     }
 
     public static List<IRecipe<?>> readRecipes(PacketBuffer buf) {
