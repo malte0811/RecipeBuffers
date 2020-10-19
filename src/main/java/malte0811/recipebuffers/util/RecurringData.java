@@ -20,6 +20,7 @@ import java.util.function.Function;
  */
 public abstract class RecurringData<T> {
     protected final PacketBuffer io;
+    protected int hits = 0;
 
     protected RecurringData(PacketBuffer io) {
         this.io = io;
@@ -68,6 +69,12 @@ public abstract class RecurringData<T> {
 
     public abstract <T2> RecurringData<T2> xmap(Function<T, T2> to, Function<T2, T> from);
 
+    public abstract int size();
+
+    public int hits() {
+        return hits;
+    }
+
     private static class Reader<T> extends RecurringData<T> {
         private final Function<PacketBuffer, T> read;
         protected final List<T> known = new ArrayList<>();
@@ -90,6 +97,7 @@ public abstract class RecurringData<T> {
                 known.add(result);
                 return result;
             } else {
+                ++hits;
                 return known.get(id);
             }
         }
@@ -97,6 +105,11 @@ public abstract class RecurringData<T> {
         @Override
         public <T2> RecurringData<T2> xmap(Function<T, T2> to, Function<T2, T> from) {
             return new Reader<>(io, read.andThen(to));
+        }
+
+        @Override
+        public int size() {
+            return known.size();
         }
     }
 
@@ -117,6 +130,8 @@ public abstract class RecurringData<T> {
             if (id < 0) {
                 write.accept(io, value);
                 known.put(value, known.size());
+            } else {
+                ++hits;
             }
         }
 
@@ -131,6 +146,11 @@ public abstract class RecurringData<T> {
                     io,
                     (pb, t2) -> write.accept(pb, from.apply(t2))
             );
+        }
+
+        @Override
+        public int size() {
+            return known.size();
         }
     }
 }

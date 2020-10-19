@@ -60,6 +60,14 @@ public class IngredientSerializer {
         }
     }
 
+    public int cacheSize() {
+        return basicIngredientHandler.size();
+    }
+
+    public int cacheHits() {
+        return basicIngredientHandler.hits();
+    }
+
     private static class ItemstackWrapper {
         private final ItemStack stack;
 

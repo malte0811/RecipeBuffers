@@ -48,6 +48,8 @@ public class RecipeListSerializer {
         RecipeBuffers.LOGGER.info("Recipe packet size: {}", buf.readableBytes());
         RecipeBuffers.LOGGER.info("Item stack bytes: {}", buf.itemStackBytes);
         RecipeBuffers.LOGGER.info("RL path bytes: {}", buf.rlPathBytes);
+        RecipeBuffers.LOGGER.info("Ingredient cache size: {}", ingredientSerializer.cacheSize());
+        RecipeBuffers.LOGGER.info("Ingredient cache hits: {}", ingredientSerializer.cacheHits());
     }
 
     public static List<IRecipe<?>> readRecipes(PacketBuffer buf) {
