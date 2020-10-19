@@ -1,6 +1,8 @@
 package malte0811.recipebuffers.util;
 
 import com.mojang.datafixers.types.Func;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.crafting.Ingredient;
 import net.minecraft.network.PacketBuffer;
@@ -17,7 +19,6 @@ import java.util.function.Function;
  * instead sends the index in the list of unique values.
  */
 public abstract class RecurringData<T> {
-    protected final List<T> known = new ArrayList<>();
     protected final PacketBuffer io;
 
     protected RecurringData(PacketBuffer io) {
@@ -29,46 +30,33 @@ public abstract class RecurringData<T> {
     }
 
     public static <T> RecurringData<T> writer(
-            PacketBuffer buffer, BiPredicate<T, T> equal, BiConsumer<PacketBuffer, T> write
+            PacketBuffer buffer, BiConsumer<PacketBuffer, T> write
     ) {
-        return new Writer<>(buffer, equal, write);
+        return new Writer<>(buffer, write);
     }
 
     public static <T> RecurringData<T> create(
             PacketBuffer buffer,
             Function<PacketBuffer, T> read,
-            BiPredicate<T, T> equal,
             BiConsumer<PacketBuffer, T> write,
             boolean reader
     ) {
         if (reader) {
             return reader(buffer, read);
         } else {
-            return writer(buffer, equal, write);
+            return writer(buffer, write);
         }
     }
 
     public static <T> RecurringData<List<T>> createForList(
             PacketBuffer buffer,
             Function<PacketBuffer, T> read,
-            BiPredicate<T, T> equal,
             BiConsumer<PacketBuffer, T> write,
             boolean reader
     ) {
         return create(
                 buffer,
                 pb -> ListSerializer.readList(pb, read),
-                (l1, l2) -> {
-                    if (l1.size() != l2.size()) {
-                        return false;
-                    }
-                    for (int i = 0; i < l1.size(); ++i) {
-                        if (!equal.test(l1.get(i), l2.get(i))) {
-                            return false;
-                        }
-                    }
-                    return true;
-                },
                 (pb, l) -> ListSerializer.writeList(pb, l, write),
                 reader
         );
@@ -82,6 +70,7 @@ public abstract class RecurringData<T> {
 
     private static class Reader<T> extends RecurringData<T> {
         private final Function<PacketBuffer, T> read;
+        protected final List<T> known = new ArrayList<>();
 
         protected Reader(PacketBuffer io, Function<PacketBuffer, T> read) {
             super(io);
@@ -112,30 +101,22 @@ public abstract class RecurringData<T> {
     }
 
     private static class Writer<T> extends RecurringData<T> {
-        protected final BiPredicate<T, T> equal;
         protected final BiConsumer<PacketBuffer, T> write;
+        protected final Object2IntMap<T> known = new Object2IntOpenHashMap<>();
 
-        protected Writer(
-                PacketBuffer io, BiPredicate<T, T> equal, BiConsumer<PacketBuffer, T> write
-        ) {
+        protected Writer(PacketBuffer io, BiConsumer<PacketBuffer, T> write) {
             super(io);
-            this.equal = equal;
             this.write = write;
         }
 
         @Override
         public void write(T value) {
-            int id = -1;
-            for (int i = 0; i < known.size(); ++i) {
-                if (equal.test(value, known.get(i))) {
-                    id = i;
-                    break;
-                }
-            }
+            int id = known.getOrDefault(value, -1);
+            // Add one because -1 takes 5 bytes as a varint
             io.writeVarInt(id + 1);
             if (id < 0) {
                 write.accept(io, value);
-                known.add(value);
+                known.put(value, known.size());
             }
         }
 
@@ -148,7 +129,6 @@ public abstract class RecurringData<T> {
         public <T2> RecurringData<T2> xmap(Function<T, T2> to, Function<T2, T> from) {
             return new Writer<>(
                     io,
-                    (x, y) -> equal.test(from.apply(x), from.apply(y)),
                     (pb, t2) -> write.accept(pb, from.apply(t2))
             );
         }

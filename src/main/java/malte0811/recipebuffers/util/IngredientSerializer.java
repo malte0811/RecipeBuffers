@@ -8,6 +8,8 @@ import net.minecraftforge.common.crafting.CraftingHelper;
 import net.minecraftforge.common.crafting.IIngredientSerializer;
 
 import java.util.Arrays;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 public class IngredientSerializer {
     private final PacketBuffer buffer;
@@ -21,13 +23,15 @@ public class IngredientSerializer {
     private static RecurringData<Ingredient> createRecurringData(PacketBuffer buffer, boolean reader) {
         return RecurringData.createForList(
                 buffer,
-                PacketBuffer::readItemStack,
-                ItemStack::areItemStacksEqual,
-                PacketBuffer::writeItemStack,
+                b -> new ItemstackWrapper(b.readItemStack()),
+                (b, i) -> b.writeItemStack(i.stack),
                 reader
         ).xmap(
-                l -> Ingredient.fromStacks(l.toArray(new ItemStack[0])),
-                i -> Arrays.asList(i.getMatchingStacks())
+                l -> {
+                    ItemStack[] stacks = l.stream().map(w -> w.stack).toArray(ItemStack[]::new);
+                    return Ingredient.fromStacks(stacks);
+                },
+                i -> Arrays.stream(i.getMatchingStacks()).map(ItemstackWrapper::new).collect(Collectors.toList())
         );
     }
 
@@ -53,6 +57,27 @@ public class IngredientSerializer {
             return CraftingHelper.getIngredient(buffer.readResourceLocation(), buffer);
         } else {
             return basicIngredientHandler.read();
+        }
+    }
+
+    private static class ItemstackWrapper {
+        private final ItemStack stack;
+
+        private ItemstackWrapper(ItemStack stack) {
+            this.stack = stack;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            ItemstackWrapper that = (ItemstackWrapper) o;
+            return ItemStack.areItemStacksEqual(stack, that.stack);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(stack.getItem(), stack.getCount(), stack.getTag());
         }
     }
 }

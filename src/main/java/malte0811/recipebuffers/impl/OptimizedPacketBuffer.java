@@ -22,7 +22,7 @@ public class OptimizedPacketBuffer extends PacketBuffer {
     public OptimizedPacketBuffer(ByteBuf wrapped, boolean reading) {
         super(wrapped);
         this.namespaces = RecurringData.create(
-                this, buffer -> buffer.readString(Short.MAX_VALUE), String::equals, PacketBuffer::writeString, reading
+                this, buffer -> buffer.readString(Short.MAX_VALUE), PacketBuffer::writeString, reading
         );
     }
 
