@@ -43,7 +43,7 @@ public class RecipeListSerializer {
         }
 
         if (Config.dumpPacket.get()) {
-            try (FileOutputStream out = new FileOutputStream("recipes.dmp")) {
+            try (FileOutputStream out = new FileOutputStream("written_recipes.dmp")) {
                 out.write(ByteBufUtil.getBytes(buf.copy()));
             }
         }
@@ -56,7 +56,12 @@ public class RecipeListSerializer {
         }
     }
 
-    public static List<IRecipe<?>> readRecipes(PacketBuffer buf) {
+    public static List<IRecipe<?>> readRecipes(PacketBuffer buf) throws IOException {
+        if (Config.dumpPacket.get()) {
+            try (FileOutputStream out = new FileOutputStream("read_recipes.dmp")) {
+                out.write(ByteBufUtil.getBytes(buf.copy()));
+            }
+        }
         buf = new OptimizedPacketBuffer(buf, true);
         List<IRecipe<?>> recipes = Lists.newArrayList();
         IngredientSerializer ingredientSerializer = new IngredientSerializer(buf, true);

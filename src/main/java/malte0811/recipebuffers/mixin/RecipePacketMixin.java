@@ -1,6 +1,6 @@
 package malte0811.recipebuffers.mixin;
 
-import malte0811.recipebuffers.impl.RecipeListSerializer;
+import malte0811.recipebuffers.impl.NewRecipePacket;
 import net.minecraft.item.crafting.IRecipe;
 import net.minecraft.network.PacketBuffer;
 import net.minecraft.network.play.server.SUpdateRecipesPacket;
@@ -22,12 +22,7 @@ public class RecipePacketMixin {
      */
     @Overwrite
     public void readPacketData(PacketBuffer buf) throws IOException {
-        try {
-            recipes = RecipeListSerializer.readRecipes(buf);
-        } catch (Throwable x) {
-            x.printStackTrace();
-            throw x;
-        }
+        recipes = NewRecipePacket.readPacketData(buf);
     }
 
     /**
@@ -36,12 +31,6 @@ public class RecipePacketMixin {
      */
     @Overwrite
     public void writePacketData(PacketBuffer buf) throws IOException {
-        try {
-            RecipeListSerializer.writeRecipes(recipes, buf);
-        } catch (Throwable x) {
-            x.printStackTrace();
-            throw x;
-        }
+        NewRecipePacket.writePacketData(buf, recipes);
     }
-
 }
