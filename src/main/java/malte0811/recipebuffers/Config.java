@@ -5,6 +5,8 @@ import net.minecraftforge.common.ForgeConfigSpec;
 public class Config {
     public static final ForgeConfigSpec.BooleanValue dumpPacket;
     public static final ForgeConfigSpec.BooleanValue logPacketStats;
+    public static final ForgeConfigSpec.BooleanValue runSerializerInSingleplayer;
+    public static final ForgeConfigSpec.IntValue debugLogLevel;
     public static final ForgeConfigSpec CONFIG_SPEC;
 
     static {
@@ -13,6 +15,13 @@ public class Config {
                 .define("dumpPacket", false);
         logPacketStats = b.comment("Write statistics of the recipe packet size to the log")
                 .define("logPacketStats", true);
+        debugLogLevel = b.comment("Controls different levels of debug output that can be useful for debugging issues")
+                .defineInRange("debugLogLevel", 0, 0, 2);
+        runSerializerInSingleplayer = b.comment(
+                "Set to true to serialize and deserialize the recipe packet even in singleplayer.",
+                "This is useless for anything but debugging issues"
+        )
+                .define("runSerializerInSingleplayer", false);
         CONFIG_SPEC = b.build();
     }
 }

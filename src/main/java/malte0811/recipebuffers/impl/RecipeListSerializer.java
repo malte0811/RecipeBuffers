@@ -10,6 +10,8 @@ import net.minecraft.item.crafting.IRecipeSerializer;
 import net.minecraft.network.PacketBuffer;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.registries.ForgeRegistries;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -24,7 +26,11 @@ import java.util.Map;
  * - Does not send the serializer ID for every recipe, instead sorts by ID and sends each ID once
  */
 public class RecipeListSerializer {
+    public static final Logger WRITE_LOGGER = LogManager.getLogger(RecipeBuffers.MODID + " - WRITE");
+    public static final Logger READ_LOGGER = LogManager.getLogger(RecipeBuffers.MODID + " - READ");
+
     public static void writeRecipes(List<IRecipe<?>> recipes, PacketBuffer bufIn) throws IOException {
+        final int debugLevel = Config.debugLogLevel.get();
         OptimizedPacketBuffer buf = new OptimizedPacketBuffer(bufIn, false);
         Map<IRecipeSerializer<?>, List<IRecipe<?>>> bySerializer = new IdentityHashMap<>();
         for (IRecipe<?> recipe : recipes) {
@@ -34,11 +40,27 @@ public class RecipeListSerializer {
 
         IngredientSerializer ingredientSerializer = new IngredientSerializer(buf, false);
         buf.writeVarInt(bySerializer.size());
+        if (debugLevel > 0) {
+            WRITE_LOGGER.debug("Number of serializers: {}", bySerializer.size());
+        }
         for (Map.Entry<IRecipeSerializer<?>, List<IRecipe<?>>> entry : bySerializer.entrySet()) {
+            if (debugLevel > 0) {
+                WRITE_LOGGER.debug(
+                        "Writing {} recipes for serializer {}",
+                        entry.getValue().size(), entry.getKey().getRegistryName()
+                );
+            }
             buf.writeRegistryIdUnsafe(ForgeRegistries.RECIPE_SERIALIZERS, entry.getKey());
             buf.writeVarInt(entry.getValue().size());
             for (IRecipe<?> recipe : entry.getValue()) {
+                if (debugLevel > 1) {
+                    WRITE_LOGGER.debug("Writing recipe {} (name: {})", recipe, recipe.getId());
+                }
+                final int oldWriteIndex = buf.writerIndex();
                 writeRecipe(recipe, buf, entry.getKey(), ingredientSerializer);
+                if (debugLevel > 1) {
+                    WRITE_LOGGER.debug("Wrote recipe, takes {} bytes", buf.writerIndex() - oldWriteIndex);
+                }
             }
         }
 
@@ -48,11 +70,11 @@ public class RecipeListSerializer {
             }
         }
         if (Config.logPacketStats.get()) {
-            RecipeBuffers.LOGGER.info("Recipe packet size: {}", buf.readableBytes());
-            RecipeBuffers.LOGGER.info("Item stack bytes: {}", buf.itemStackBytes);
-            RecipeBuffers.LOGGER.info("RL path bytes: {}", buf.rlPathBytes);
-            RecipeBuffers.LOGGER.info("Ingredient cache size: {}", ingredientSerializer.cacheSize());
-            RecipeBuffers.LOGGER.info("Ingredient cache hits: {}", ingredientSerializer.cacheHits());
+            WRITE_LOGGER.info("Recipe packet size: {}", buf.readableBytes());
+            WRITE_LOGGER.info("Item stack bytes: {}", buf.itemStackBytes);
+            WRITE_LOGGER.info("RL path bytes: {}", buf.rlPathBytes);
+            WRITE_LOGGER.info("Ingredient cache size: {}", ingredientSerializer.cacheSize());
+            WRITE_LOGGER.info("Ingredient cache hits: {}", ingredientSerializer.cacheHits());
         }
     }
 
@@ -62,16 +84,31 @@ public class RecipeListSerializer {
                 out.write(ByteBufUtil.getBytes(buf.copy()));
             }
         }
+        final int debugLevel = Config.debugLogLevel.get();
         buf = new OptimizedPacketBuffer(buf, true);
         List<IRecipe<?>> recipes = Lists.newArrayList();
         IngredientSerializer ingredientSerializer = new IngredientSerializer(buf, true);
         int numSerializer = buf.readVarInt();
+        if (debugLevel > 0) {
+            READ_LOGGER.debug("Number of serializers: {}", numSerializer);
+        }
         for (int serId = 0; serId < numSerializer; ++serId) {
             IRecipeSerializer<?> serializer = buf.readRegistryIdUnsafe(ForgeRegistries.RECIPE_SERIALIZERS);
             int numRecipes = buf.readVarInt();
+            if (debugLevel > 0) {
+                READ_LOGGER.debug("Reading {} recipes for serializer {}", numRecipes, serializer.getRegistryName());
+            }
 
             for (int recId = 0; recId < numRecipes; ++recId) {
-                recipes.add(readRecipe(buf, serializer, ingredientSerializer));
+                final int oldReadIndex = buf.readerIndex();
+                IRecipe<?> readRecipe = readRecipe(buf, serializer, ingredientSerializer);
+                recipes.add(readRecipe);
+                if (debugLevel > 1) {
+                    READ_LOGGER.debug(
+                            "Read recipe {} (name {}), bytes read: {}",
+                            readRecipe, readRecipe.getId(), buf.readerIndex() - oldReadIndex
+                    );
+                }
             }
         }
         return recipes;
