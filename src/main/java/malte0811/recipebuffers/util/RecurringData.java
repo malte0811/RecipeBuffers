@@ -32,16 +32,17 @@ public abstract class RecurringData<T> {
     }
 
     public static <T> RecurringData<T> create(
-            PacketBuffer buffer,
-            Function<PacketBuffer, T> read,
-            BiConsumer<PacketBuffer, T> write,
-            boolean reader
+            PacketBuffer buffer, Function<PacketBuffer, T> read, BiConsumer<PacketBuffer, T> write, boolean reader
     ) {
         if (reader) {
             return reader(buffer, read);
         } else {
             return writer(buffer, write);
         }
+    }
+
+    public static RecurringData<String> createForString(PacketBuffer buffer, boolean reading) {
+        return RecurringData.create(buffer, buf -> buf.readString(Short.MAX_VALUE), PacketBuffer::writeString, reading);
     }
 
     public static <T> RecurringData<List<T>> createForList(

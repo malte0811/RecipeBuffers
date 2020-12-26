@@ -2,7 +2,6 @@ package malte0811.recipebuffers.impl;
 
 import com.google.common.base.Preconditions;
 import io.netty.buffer.ByteBuf;
-import malte0811.recipebuffers.util.RecurringData;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
@@ -15,30 +14,24 @@ import net.minecraftforge.registries.ForgeRegistries;
 import javax.annotation.Nonnull;
 
 public class OptimizedPacketBuffer extends PacketBuffer {
-    private final RecurringData<String> namespaces;
-    int rlPathBytes = 0;
     int itemStackBytes = 0;
+    final ResourceLocationSerializer resourceLocationSerializer;
 
     public OptimizedPacketBuffer(ByteBuf wrapped, boolean reading) {
         super(wrapped);
-        this.namespaces = RecurringData.create(
-                this, buffer -> buffer.readString(Short.MAX_VALUE), PacketBuffer::writeString, reading
-        );
+        resourceLocationSerializer = new ResourceLocationSerializer(this, reading);
     }
 
     @Nonnull
     @Override
     public ResourceLocation readResourceLocation() {
-        return new ResourceLocation(namespaces.read(), readString(Short.MAX_VALUE));
+        return resourceLocationSerializer.read();
     }
 
     @Nonnull
     @Override
     public PacketBuffer writeResourceLocation(@Nonnull ResourceLocation toWrite) {
-        namespaces.write(toWrite.getNamespace());
-        final int lastSize = writerIndex();
-        writeString(toWrite.getPath());
-        rlPathBytes += writerIndex() - lastSize;
+        resourceLocationSerializer.write(toWrite);
         return this;
     }
 

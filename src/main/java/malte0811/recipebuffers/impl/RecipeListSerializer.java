@@ -90,7 +90,7 @@ public class RecipeListSerializer {
         if (Config.logPacketStats.get()) {
             WRITE_LOGGER.info("Recipe packet size: {}", buf.readableBytes());
             WRITE_LOGGER.info("Item stack bytes: {}", buf.itemStackBytes);
-            WRITE_LOGGER.info("RL path bytes: {}", buf.rlPathBytes);
+            WRITE_LOGGER.info("RL path bytes: {}", buf.resourceLocationSerializer.rlPathBytes);
             WRITE_LOGGER.info("Ingredient cache size: {}", ingredientSerializer.cacheSize());
             WRITE_LOGGER.info("Ingredient cache hits: {}", ingredientSerializer.cacheHits());
         }
