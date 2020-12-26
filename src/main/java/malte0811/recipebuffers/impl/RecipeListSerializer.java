@@ -5,6 +5,7 @@ import io.netty.buffer.ByteBufUtil;
 import malte0811.recipebuffers.Config;
 import malte0811.recipebuffers.RecipeBuffers;
 import malte0811.recipebuffers.util.IngredientSerializer;
+import malte0811.recipebuffers.util.StateStack;
 import net.minecraft.item.crafting.IRecipe;
 import net.minecraft.item.crafting.IRecipeSerializer;
 import net.minecraft.network.PacketBuffer;
@@ -38,12 +39,14 @@ public class RecipeListSerializer {
         }
         bufIn.writeByte(configByte);
 
+        final StateStack.Entry computeLists = StateStack.push("Compute recipe lists");
         OptimizedPacketBuffer buf = new OptimizedPacketBuffer(bufIn, false);
         Map<IRecipeSerializer<?>, List<IRecipe<?>>> bySerializer = new IdentityHashMap<>();
         for (IRecipe<?> recipe : recipes) {
             bySerializer.computeIfAbsent(recipe.getSerializer(), ser -> new ArrayList<>())
                     .add(recipe);
         }
+        computeLists.pop();
 
         IngredientSerializer ingredientSerializer = new IngredientSerializer(buf, false);
         buf.writeVarInt(bySerializer.size());
@@ -51,6 +54,9 @@ public class RecipeListSerializer {
             WRITE_LOGGER.debug("Number of serializers: {}", bySerializer.size());
         }
         for (Map.Entry<IRecipeSerializer<?>, List<IRecipe<?>>> entry : bySerializer.entrySet()) {
+            final StateStack.Entry serializerEntry = StateStack.push(
+                    "Writing recipes for serializer " + entry.getKey().getRegistryName()
+            );
             if (debugLevel > 0) {
                 WRITE_LOGGER.debug(
                         "Writing {} recipes for serializer {}",
@@ -60,6 +66,9 @@ public class RecipeListSerializer {
             buf.writeRegistryIdUnsafe(ForgeRegistries.RECIPE_SERIALIZERS, entry.getKey());
             buf.writeVarInt(entry.getValue().size());
             for (IRecipe<?> recipe : entry.getValue()) {
+                final StateStack.Entry recipeEntry = StateStack.push(
+                        "Writing recipe " + recipe.getId()
+                );
                 if (debugLevel > 1) {
                     WRITE_LOGGER.debug("Writing recipe {} (name: {})", recipe, recipe.getId());
                 }
@@ -68,7 +77,9 @@ public class RecipeListSerializer {
                 if (debugLevel > 1) {
                     WRITE_LOGGER.debug("Wrote recipe, takes {} bytes", buf.writerIndex() - oldWriteIndex);
                 }
+                recipeEntry.pop();
             }
+            serializerEntry.pop();
         }
 
         if (Config.dumpPacket.get()) {
@@ -103,6 +114,9 @@ public class RecipeListSerializer {
         }
         for (int serId = 0; serId < numSerializer; ++serId) {
             IRecipeSerializer<?> serializer = buf.readRegistryIdUnsafe(ForgeRegistries.RECIPE_SERIALIZERS);
+            final StateStack.Entry serializerEntry = StateStack.push(
+                    "Reading recipes for serializer " + serializer.getRegistryName()
+            );
             int numRecipes = buf.readVarInt();
             if (debugLevel > 0) {
                 READ_LOGGER.debug("Reading {} recipes for serializer {}", numRecipes, serializer.getRegistryName());
@@ -119,6 +133,7 @@ public class RecipeListSerializer {
                     );
                 }
             }
+            serializerEntry.pop();
         }
         return recipes;
     }
@@ -137,6 +152,7 @@ public class RecipeListSerializer {
         }
         final int oldReadIndex = buffer.readerIndex();
         ResourceLocation name = buffer.readResourceLocation();
+        StateStack.Entry recipeEntry = StateStack.push("Reading recipe " + name);
         R result;
         if (serializer instanceof IRecurringRecipeSerializer<?>)
             result = ((IRecurringRecipeSerializer<R>) serializer).read(name, buffer, ingredientSerializer);
@@ -145,11 +161,10 @@ public class RecipeListSerializer {
         final int recipeLength = buffer.readerIndex() - oldReadIndex;
         if (readLength && expectedLength != recipeLength) {
             throw new IllegalStateException(
-                    "Recipe " + name + " (" + (result != null ? result.getClass() : null) + " , serializer " +
-                            serializer.getRegistryName() + ") read " + recipeLength + " bytes, but wrote "
-                            + expectedLength + " bytes!"
+                    "Recipe read " + recipeLength + " bytes, but wrote " + expectedLength + " bytes, see log for details"
             );
         } else {
+            recipeEntry.pop();
             return result;
         }
     }
