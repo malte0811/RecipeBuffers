@@ -6,6 +6,7 @@ public class Config {
     public static final ForgeConfigSpec.BooleanValue dumpPacket;
     public static final ForgeConfigSpec.BooleanValue logPacketStats;
     public static final ForgeConfigSpec.BooleanValue runSerializerInSingleplayer;
+    public static final ForgeConfigSpec.BooleanValue writeRecipeLength;
     public static final ForgeConfigSpec.IntValue debugLogLevel;
     public static final ForgeConfigSpec CONFIG_SPEC;
 
@@ -22,6 +23,9 @@ public class Config {
                 "This is useless for anything but debugging issues"
         )
                 .define("runSerializerInSingleplayer", false);
+        writeRecipeLength = b.comment(
+                "Prefix recipes by their length in the packet. This allows early detection of broken serializers")
+                .define("writeRecipeLength", false);
         CONFIG_SPEC = b.build();
     }
 }

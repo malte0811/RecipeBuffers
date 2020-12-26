@@ -31,6 +31,13 @@ public class RecipeListSerializer {
 
     public static void writeRecipes(List<IRecipe<?>> recipes, PacketBuffer bufIn) throws IOException {
         final int debugLevel = Config.debugLogLevel.get();
+        final boolean writeLength = Config.writeRecipeLength.get();
+        byte configByte = 0;
+        if (writeLength) {
+            configByte |= ConfigMasks.RECIPE_LENGTH;
+        }
+        bufIn.writeByte(configByte);
+
         OptimizedPacketBuffer buf = new OptimizedPacketBuffer(bufIn, false);
         Map<IRecipeSerializer<?>, List<IRecipe<?>>> bySerializer = new IdentityHashMap<>();
         for (IRecipe<?> recipe : recipes) {
@@ -57,7 +64,7 @@ public class RecipeListSerializer {
                     WRITE_LOGGER.debug("Writing recipe {} (name: {})", recipe, recipe.getId());
                 }
                 final int oldWriteIndex = buf.writerIndex();
-                writeRecipe(recipe, buf, entry.getKey(), ingredientSerializer);
+                writeRecipe(recipe, buf, entry.getKey(), ingredientSerializer, writeLength);
                 if (debugLevel > 1) {
                     WRITE_LOGGER.debug("Wrote recipe, takes {} bytes", buf.writerIndex() - oldWriteIndex);
                 }
@@ -78,14 +85,16 @@ public class RecipeListSerializer {
         }
     }
 
-    public static List<IRecipe<?>> readRecipes(PacketBuffer buf) throws IOException {
+    public static List<IRecipe<?>> readRecipes(PacketBuffer bufIn) throws IOException {
         if (Config.dumpPacket.get()) {
             try (FileOutputStream out = new FileOutputStream("read_recipes.dmp")) {
-                out.write(ByteBufUtil.getBytes(buf.copy()));
+                out.write(ByteBufUtil.getBytes(bufIn.copy()));
             }
         }
         final int debugLevel = Config.debugLogLevel.get();
-        buf = new OptimizedPacketBuffer(buf, true);
+        OptimizedPacketBuffer buf = new OptimizedPacketBuffer(bufIn, true);
+        final byte configByte = buf.readByte();
+        final boolean includesLengthPrefix = (configByte & ConfigMasks.RECIPE_LENGTH) != 0;
         List<IRecipe<?>> recipes = Lists.newArrayList();
         IngredientSerializer ingredientSerializer = new IngredientSerializer(buf, true);
         int numSerializer = buf.readVarInt();
@@ -101,7 +110,7 @@ public class RecipeListSerializer {
 
             for (int recId = 0; recId < numRecipes; ++recId) {
                 final int oldReadIndex = buf.readerIndex();
-                IRecipe<?> readRecipe = readRecipe(buf, serializer, ingredientSerializer);
+                IRecipe<?> readRecipe = readRecipe(buf, serializer, ingredientSerializer, includesLengthPrefix);
                 recipes.add(readRecipe);
                 if (debugLevel > 1) {
                     READ_LOGGER.debug(
@@ -115,27 +124,64 @@ public class RecipeListSerializer {
     }
 
     public static <R extends IRecipe<?>> R readRecipe(
-            PacketBuffer buffer,
+            OptimizedPacketBuffer buffer,
             IRecipeSerializer<R> serializer,
-            IngredientSerializer ingredientSerializer
+            IngredientSerializer ingredientSerializer,
+            boolean readLength
     ) {
+        final int expectedLength;
+        if (readLength) {
+            expectedLength = buffer.readVarInt();
+        } else {
+            expectedLength = -1;
+        }
+        final int oldReadIndex = buffer.readerIndex();
         ResourceLocation name = buffer.readResourceLocation();
+        R result;
         if (serializer instanceof IRecurringRecipeSerializer<?>)
-            return ((IRecurringRecipeSerializer<R>) serializer).read(name, buffer, ingredientSerializer);
+            result = ((IRecurringRecipeSerializer<R>) serializer).read(name, buffer, ingredientSerializer);
         else
-            return serializer.read(name, buffer);
+            result = serializer.read(name, buffer);
+        final int recipeLength = buffer.readerIndex() - oldReadIndex;
+        if (readLength && expectedLength != recipeLength) {
+            throw new IllegalStateException(
+                    "Recipe " + name + " (" + (result != null ? result.getClass() : null) + " , serializer " +
+                            serializer.getRegistryName() + ") read " + recipeLength + " bytes, but wrote "
+                            + expectedLength + " bytes!"
+            );
+        } else {
+            return result;
+        }
     }
 
     public static <T extends IRecipe<?>> void writeRecipe(
             T recipe,
-            PacketBuffer buffer,
+            OptimizedPacketBuffer buffer,
             IRecipeSerializer<?> serializer,
-            IngredientSerializer ingredientSerializer
+            IngredientSerializer ingredientSerializer,
+            boolean writeLength
     ) {
+        final int writerIndexBefore = buffer.writerIndex();
         buffer.writeResourceLocation(recipe.getId());
         if (serializer instanceof IRecurringRecipeSerializer<?>)
             ((IRecurringRecipeSerializer<T>) serializer).write(buffer, recipe, ingredientSerializer);
         else
             ((IRecipeSerializer<T>) serializer).write(buffer, recipe);
+        if (writeLength) {
+            final int readerIndexBefore = buffer.readerIndex();
+            final int bytesWritten = buffer.writerIndex() - writerIndexBefore;
+            buffer.readerIndex(writerIndexBefore);
+            byte[] recipeBytes = new byte[bytesWritten];
+            buffer.readBytes(recipeBytes);
+            buffer.readerIndex(readerIndexBefore);
+
+            buffer.writerIndex(writerIndexBefore);
+            buffer.writeVarInt(bytesWritten);
+            buffer.writeBytes(recipeBytes);
+        }
+    }
+
+    private static class ConfigMasks {
+        public static final byte RECIPE_LENGTH = 1;
     }
 }
