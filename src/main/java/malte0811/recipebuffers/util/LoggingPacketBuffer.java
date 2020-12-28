@@ -129,6 +129,28 @@ public class LoggingPacketBuffer extends OptimizedPacketBuffer {
         return processRead(Type.RESOURCE_LOCATION);
     }
 
+    @Nonnull
+    @Override
+    public PacketBuffer writeLong(long val) {
+        return processWrite(Type.LONG, val);
+    }
+
+    @Override
+    public long readLong() {
+        return processRead(Type.LONG);
+    }
+
+    @Nonnull
+    @Override
+    public PacketBuffer writeInt(int val) {
+        return processWrite(Type.INT, val);
+    }
+
+    @Override
+    public int readInt() {
+        return processRead(Type.INT);
+    }
+
     private <T> PacketBuffer processWrite(Type<T> t, T data) {
         log(t, data);
         t.write.accept(internal, data);
@@ -150,39 +172,49 @@ public class LoggingPacketBuffer extends OptimizedPacketBuffer {
         public static final List<Type<?>> INSTANCES = new ArrayList<>();
 
         public static final Type<byte[]> BYTE_ARRAY = new Type<>(
-                PacketBuffer::writeByteArray,
-                PacketBuffer::readByteArray
+                "byte[]", PacketBuffer::writeByteArray, PacketBuffer::readByteArray
         );
         public static final Type<int[]> VARINT_ARRAY = new Type<>(
-                PacketBuffer::writeVarIntArray,
-                PacketBuffer::readVarIntArray
+                "varint[]", PacketBuffer::writeVarIntArray, PacketBuffer::readVarIntArray
         );
         public static final Type<long[]> LONG_ARRAY = new Type<>(
-                PacketBuffer::writeLongArray,
-                buf -> buf.readLongArray(null)
+                "long[]", PacketBuffer::writeLongArray, buf -> buf.readLongArray(null)
         );
         public static final Type<BlockPos> BLOCK_POS = new Type<>(
-                PacketBuffer::writeBlockPos,
-                PacketBuffer::readBlockPos
+                "BlockPos", PacketBuffer::writeBlockPos, PacketBuffer::readBlockPos
         );
-        public static final Type<Integer> VARINT = new Type<>(PacketBuffer::writeVarInt, PacketBuffer::readVarInt);
-        public static final Type<Long> VARLONG = new Type<>(PacketBuffer::writeVarLong, PacketBuffer::readVarLong);
-        public static final Type<UUID> UUID = new Type<>(PacketBuffer::writeUniqueId, PacketBuffer::readUniqueId);
-        public static final Type<String> STRING = new Type<>(PacketBuffer::writeString, PacketBuffer::readString);
+        public static final Type<Integer> VARINT = new Type<>(
+                "varint", PacketBuffer::writeVarInt, PacketBuffer::readVarInt
+        );
+        public static final Type<Long> VARLONG = new Type<>(
+                "varlong", PacketBuffer::writeVarLong, PacketBuffer::readVarLong
+        );
+        public static final Type<Integer> INT = new Type<>(
+                "int", PacketBuffer::writeInt, PacketBuffer::readInt
+        );
+        public static final Type<Long> LONG = new Type<>(
+                "long", PacketBuffer::writeLong, PacketBuffer::readLong
+        );
+        public static final Type<UUID> UUID = new Type<>(
+                "UUID", PacketBuffer::writeUniqueId, PacketBuffer::readUniqueId
+        );
+        public static final Type<String> STRING = new Type<>(
+                "String", PacketBuffer::writeString, PacketBuffer::readString
+        );
         public static final Type<ResourceLocation> RESOURCE_LOCATION = new Type<>(
-                PacketBuffer::writeResourceLocation,
-                PacketBuffer::readResourceLocation
+                "ResourceLocation", PacketBuffer::writeResourceLocation, PacketBuffer::readResourceLocation
         );
         public static final Type<CompoundNBT> COMPOUND_TAG = new Type<>(
-                PacketBuffer::writeCompoundTag,
-                PacketBuffer::readCompoundTag
+                "CompoundNBT", PacketBuffer::writeCompoundTag, PacketBuffer::readCompoundTag
         );
 
         private final int index;
+        private final String name;
         private final BiConsumer<PacketBuffer, T> write;
         private final Function<PacketBuffer, T> read;
 
-        private Type(BiConsumer<PacketBuffer, T> write, Function<PacketBuffer, T> read) {
+        private Type(String name, BiConsumer<PacketBuffer, T> write, Function<PacketBuffer, T> read) {
+            this.name = name;
             this.index = INSTANCES.size();
             this.write = write;
             this.read = read;
@@ -191,7 +223,7 @@ public class LoggingPacketBuffer extends OptimizedPacketBuffer {
 
         public void rewrite(PacketBuffer source, PacketBuffer target) {
             T temp = read.apply(source);
-            //System.out.println("Rewriting "+temp+ " ("+(temp == null?null:temp.getClass())+")");
+            System.out.println("Rewriting " + temp + " (" + name + ")");
             write.accept(target, temp);
         }
     }
