@@ -17,17 +17,25 @@ public class Reparse {
         while ((next = input.read()) != -1) {
             inputBuffer.writeByte(next);
         }
+        inputBuffer = inputBuffer.asReadOnly();
+        for (int i = 0; i < 10; ++i) {
+            reparse(inputBuffer.duplicate());
+        }
+    }
+
+    private static void reparse(ByteBuf inputBuffer) {
         PacketBuffer inputPB = new PacketBuffer(inputBuffer);
         ByteBuf outputBuffer = Unpooled.buffer();
         PacketBuffer outputPB = new OptimizedPacketBuffer(outputBuffer, false);//PacketBuffer(outputBuffer);//
+        PacketBuffer outputAsInput = new OptimizedPacketBuffer(outputBuffer, true);
+        final long reparseStart = System.currentTimeMillis();
         int idBytes = 0;
         while (inputPB.readerIndex() != inputPB.writerIndex()) {
             final int id = inputPB.readVarInt();
             idBytes += PacketBuffer.getVarIntSize(id);
-            LoggingPacketBuffer.Type.INSTANCES.get(id).rewrite(inputPB, outputPB);
+            LoggingPacketBuffer.Type.INSTANCES.get(id).rerewrite(inputPB, outputPB, outputAsInput, false);
         }
-        System.out.println(
-                "Plain size: " + (inputPB.writerIndex() - idBytes) + ", opt size: " + outputPB.writerIndex()
-        );
+        System.out.printf("Plain size: %,d, opt size: %,d\n", inputPB.writerIndex() - idBytes, outputPB.writerIndex());
+        System.out.println("Time for reparse: " + (System.currentTimeMillis() - reparseStart) + " ms");
     }
 }

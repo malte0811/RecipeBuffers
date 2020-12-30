@@ -1,5 +1,6 @@
 package malte0811.recipebuffers.util;
 
+import com.google.common.base.Preconditions;
 import io.netty.buffer.Unpooled;
 import malte0811.recipebuffers.impl.OptimizedPacketBuffer;
 import net.minecraft.nbt.CompoundNBT;
@@ -13,6 +14,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
@@ -221,10 +223,14 @@ public class LoggingPacketBuffer extends OptimizedPacketBuffer {
             INSTANCES.add(this);
         }
 
-        public void rewrite(PacketBuffer source, PacketBuffer target) {
+        public void rerewrite(PacketBuffer source, PacketBuffer target, PacketBuffer targetAsInput, boolean log) {
             T temp = read.apply(source);
-            System.out.println("Rewriting " + temp + " (" + name + ")");
+            if (log) {
+                System.out.println("Rewriting " + temp + " (" + name + ")");
+            }
             write.accept(target, temp);
+            T reread = read.apply(targetAsInput);
+            Preconditions.checkState(Objects.deepEquals(reread, temp));
         }
     }
 }
