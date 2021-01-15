@@ -1,6 +1,5 @@
 package malte0811.recipebuffers.impl;
 
-import malte0811.recipebuffers.RecipeBuffers;
 import malte0811.recipebuffers.util.IngredientSerializer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.crafting.Ingredient;
@@ -13,11 +12,6 @@ import javax.annotation.Nonnull;
 
 // Uses recurring data optimization, very effective on recipes including large tag inputs
 public class RecurringShapedSerializer extends ShapedRecipe.Serializer implements IRecurringRecipeSerializer<ShapedRecipe> {
-    public static final RecurringShapedSerializer INSTANCE = new RecurringShapedSerializer();
-
-    {
-        setRegistryName(RecipeBuffers.MODID, "shaped");
-    }
 
     @Override
     public void write(

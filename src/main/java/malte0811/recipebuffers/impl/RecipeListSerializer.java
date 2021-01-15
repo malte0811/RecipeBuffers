@@ -3,6 +3,7 @@ package malte0811.recipebuffers.impl;
 import com.google.common.collect.Lists;
 import io.netty.buffer.ByteBufUtil;
 import malte0811.recipebuffers.Config;
+import malte0811.recipebuffers.RBRecipeSerializers;
 import malte0811.recipebuffers.RecipeBuffers;
 import malte0811.recipebuffers.util.IngredientSerializer;
 import malte0811.recipebuffers.util.StateStack;
@@ -64,6 +65,7 @@ public class RecipeListSerializer {
                 );
             }
             buf.writeRegistryIdUnsafe(ForgeRegistries.RECIPE_SERIALIZERS, entry.getKey());
+            IRecipeSerializer<?> serializerToUse = RBRecipeSerializers.getSerializer(entry.getKey());
             buf.writeVarInt(entry.getValue().size());
             for (IRecipe<?> recipe : entry.getValue()) {
                 final StateStack.Entry recipeEntry = StateStack.push(
@@ -73,7 +75,7 @@ public class RecipeListSerializer {
                     WRITE_LOGGER.debug("Writing recipe {} (name: {})", recipe, recipe.getId());
                 }
                 final int oldWriteIndex = buf.writerIndex();
-                writeRecipe(recipe, buf, entry.getKey(), ingredientSerializer, writeLength);
+                writeRecipe(recipe, buf, serializerToUse, ingredientSerializer, writeLength);
                 if (debugLevel > 1) {
                     WRITE_LOGGER.debug("Wrote recipe, takes {} bytes", buf.writerIndex() - oldWriteIndex);
                 }
@@ -108,7 +110,7 @@ public class RecipeListSerializer {
         final boolean includesLengthPrefix = (configByte & ConfigMasks.RECIPE_LENGTH) != 0;
         List<IRecipe<?>> recipes = Lists.newArrayList();
         IngredientSerializer ingredientSerializer = new IngredientSerializer(buf, true);
-        int numSerializer = buf.readVarInt();
+        final int numSerializer = buf.readVarInt();
         if (debugLevel > 0) {
             READ_LOGGER.debug("Number of serializers: {}", numSerializer);
         }
@@ -117,10 +119,11 @@ public class RecipeListSerializer {
             final StateStack.Entry serializerEntry = StateStack.push(
                     "Reading recipes for serializer " + serializer.getRegistryName()
             );
-            int numRecipes = buf.readVarInt();
+            final int numRecipes = buf.readVarInt();
             if (debugLevel > 0) {
                 READ_LOGGER.debug("Reading {} recipes for serializer {}", numRecipes, serializer.getRegistryName());
             }
+            serializer = RBRecipeSerializers.getSerializer(serializer);
 
             for (int recId = 0; recId < numRecipes; ++recId) {
                 final int oldReadIndex = buf.readerIndex();
