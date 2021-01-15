@@ -4,9 +4,9 @@
   "compatibilityLevel": "JAVA_8",
   "refmap": "recipebuffers.refmap.json",
   "mixins": [
-    "RecipePacketMixin",
-    "ShapedRecipeMixin",
-    "ShapelessRecipeMixin"
+    "PacketDecoderMixin",
+    "RecipePacketAccess",
+    "RecipePacketMixin"
   ],
   "injectors": {
     "defaultRequire": 1
